@@ -100,14 +100,17 @@ class ThrottlingBucket:
         if updated_at is None:
             # во избежание одновременного присвоения значения ёмкости из нескольких потоков,
             # мы сначала пробуем нарастить ёмкость ведра
+            # print('create', self.updated_at_key)
             if self._capacity is None or cache.incr(self.capacity_key, max_capacity) > max_capacity:
                 cache.set(self.capacity_key, max_capacity, cache_interval)
             cache.set(self.updated_at_key, now, cache_interval)
 
         elif updated_at < now - self.rule.interval:
+            # print('update', self.updated_at_key)
             cache.set_many({
                 self.capacity_key: (self._capacity or 0) + max_capacity,
                 self.updated_at_key: now
             }, cache_interval)
         else:
+            # print('spent', self.updated_at_key)
             cache.decr(self.capacity_key)

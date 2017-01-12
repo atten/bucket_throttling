@@ -31,4 +31,7 @@ def localize_timedelta(delta: timedelta) -> str:
     if num_miliseconds > 0:
         ret.append(ng('%d ms', '%d ms', num_miliseconds) % num_miliseconds)
 
+    if not len(ret):
+        ret.append(ng('%d second', '%d seconds', 0) % 0)
+
     return ' '.join(ret)

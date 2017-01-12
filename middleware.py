@@ -12,8 +12,8 @@ class BucketThrottlingMiddleware:
         timeout = get_timeout(buckets)
 
         if not timeout:
-            response = self.get_response(request)
             commit_request(buckets)
+            response = self.get_response(request)
         else:
             response = HttpResponseThrottled(timeout)
         return response
