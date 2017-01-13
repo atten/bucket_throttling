@@ -15,7 +15,7 @@ class ThrottlingRule:
     methods = None
     distinct_by_user = None
 
-    def __init__(self, url_path: str, max_requests: int, interval: 'timedelta', methods: Optional[list]=None, distinct_by_user: Optional[bool]=False):
+    def __init__(self, max_requests: int, interval: 'timedelta', methods: Optional[list]=None, url_path: Optional[str]=None, distinct_by_user: Optional[bool]=False):
         self.url_regex = re.compile(url_path) if url_path else None
         self.max_requests = max_requests
         self.interval = interval
@@ -60,7 +60,7 @@ class ThrottlingBucket:
         if r.distinct_by_user:
             parts += ['user', self.request.user.id]
         parts += [r.max_requests, r.interval]
-        return ';'.join(map(lambda s: str(s), parts))
+        return ';'.join(map(lambda s: str(s).replace(' ', '_'), parts))
 
     @property
     def _capacity(self) -> Union[None, int]:

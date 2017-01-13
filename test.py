@@ -19,9 +19,9 @@ UserType = Union[AnonymousUser, AbstractBaseUser]
 
 TEST_SETTINGS = {
     'RULES': [
-        ThrottlingRule('', max_requests=2, interval=timedelta(seconds=5), methods=['POST', 'PATCH', 'PUT', 'DELETE'], distinct_by_user=True),
-        ThrottlingRule('path1', max_requests=1, interval=timedelta(seconds=1), methods=['GET'], distinct_by_user=True),
-        ThrottlingRule('path2', max_requests=20, interval=timedelta(seconds=4), methods=['GET'], distinct_by_user=False),
+        ThrottlingRule(max_requests=2, interval=timedelta(seconds=5), methods=['POST', 'PATCH', 'PUT', 'DELETE'], url_path='', distinct_by_user=True),
+        ThrottlingRule(max_requests=1, interval=timedelta(seconds=1), methods=['GET'], url_path='path1', distinct_by_user=True),
+        ThrottlingRule(max_requests=20, interval=timedelta(seconds=4), methods=['GET'], url_path='path2', distinct_by_user=False),
     ]
 }
 

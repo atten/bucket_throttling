@@ -4,8 +4,8 @@ from .models import ThrottlingRule
 
 DJANGO_BUCKET_THROTTLING = {
     'RULES': [
-        ThrottlingRule('', max_requests=2, interval=timedelta(seconds=10), methods=['POST'], distinct_by_user=True),
-    ]
+        # ThrottlingRule(max_requests=2, interval=timedelta(seconds=10), methods=['POST'], distinct_by_user=True),
+    ],
 }
 
 

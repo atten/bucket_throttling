@@ -8,10 +8,16 @@ from datetime import timedelta
 BucketList = List[ThrottlingBucket]
 
 
-def get_buckets(request) -> BucketList:
-    """Возвращает вёдра, попадающие под правила для запроса"""
+def get_buckets(request, rules=None) -> BucketList:
+    """
+    Возвращает вёдра, попадающие под правила для запроса.
+    Если правила не указаны, берём их из настроек.
+    """
     ret = []
-    for rule in get_setting('RULES', []):
+    if rules is None:
+        rules = get_setting('RULES', [])
+
+    for rule in rules:
         if rule.is_suitable(request):
             ret.append(ThrottlingBucket(rule, request))
     return ret
