@@ -1,5 +1,5 @@
-from .utils import *
-from .response import HttpResponseThrottled
+from ..utils import *
+from ..response import HttpResponseThrottled
 
 
 class BucketThrottlingMiddleware:
@@ -9,7 +9,7 @@ class BucketThrottlingMiddleware:
 
     def __call__(self, request):
         buckets = get_buckets(request)
-        timeout = get_timeout(buckets)
+        timeout = check_throttle(buckets)
 
         if not timeout:
             commit_request(buckets)

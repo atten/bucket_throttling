@@ -1,33 +1,30 @@
 from typing import List
 
-from .models import ThrottlingBucket
-from .settings import get_setting
+from . import ThrottlingBucket, ThrottlingRule
 from datetime import timedelta
 
 
+RuleList = List[ThrottlingRule]
 BucketList = List[ThrottlingBucket]
 
 
-def get_buckets(request, rules=None) -> BucketList:
+def get_buckets(rules: RuleList, **arguments) -> BucketList:
     """
-    Возвращает вёдра, попадающие под правила для запроса.
-    Если правила не указаны, берём их из настроек.
+    Возвращает вёдра, созданные путём комбинации списка правил с аргументами запроса.
     """
     ret = []
-    if rules is None:
-        rules = get_setting('RULES', [])
-
+    if not rules:
+        return ret
     for rule in rules:
-        if rule.is_suitable(request):
-            ret.append(ThrottlingBucket(rule, request))
+        ret.append(ThrottlingBucket(rule, **arguments))
     return ret
 
 
-def get_timeout(buckets: BucketList) -> timedelta:
-    """Возвращает интервал, который осталось подождать до опустошения вёдер"""
+def check_throttle(buckets: BucketList) -> timedelta:
+    """Возвращает интервал, который осталось подождать до истечения таймаута вёдер"""
     ret = timedelta()
     for b in buckets:
-        t = b.check_timeout()
+        t = b.check_throttle()
         if t and t > ret:
             ret = t
     return ret
