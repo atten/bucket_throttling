@@ -1,5 +1,5 @@
 from ..utils import *
-from ..response import HttpResponseThrottled
+from .django import HttpResponseThrottled
 
 
 class ThrottledViewSetMixIn:

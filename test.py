@@ -1,111 +1,72 @@
-from typing import Union
+import unittest
 import time
 
-from django.contrib.auth.models import AnonymousUser
-from django.contrib.auth.base_user import AbstractBaseUser
-from django.conf import settings
-from django.http.request import HttpRequest
-from django.core.cache import cache
-from django.test import SimpleTestCase
-from django.test.runner import DiscoverRunner
-
-from django_bucket_throttling.models import ThrottlingRule
+from django_bucket_throttling import setup
 from django_bucket_throttling.utils import *
-from django_bucket_throttling.translation import localize_timedelta
 
 
-UserType = Union[AnonymousUser, AbstractBaseUser]
-
-
-TEST_SETTINGS = {
-    'RULES': [
-        ThrottlingRule(max_requests=2, interval=timedelta(seconds=5), methods=['POST', 'PATCH', 'PUT', 'DELETE'], url_path='', distinct_by_user=True),
-        ThrottlingRule(max_requests=1, interval=timedelta(seconds=1), methods=['GET'], url_path='path1', distinct_by_user=True),
-        ThrottlingRule(max_requests=20, interval=timedelta(seconds=4), methods=['GET'], url_path='path2', distinct_by_user=False),
-    ]
-}
-
-
-class TestRequest(HttpRequest):
-    def __init__(self, path, method, user):
-        super().__init__()
-        self.path = path
-        self.method = method
-        self.user = user
-
-
-def create_user(**kwargs) -> AbstractBaseUser:
-    ret = AbstractBaseUser()
-    [setattr(ret, k, v) for k, v in kwargs.items()]
-    return ret
-
-
-def try_request(path: str, method: str, user: UserType, delay_after: float, expected_result: bool):
-    print('%s %s [%s]' % (method, path, user.id or user))
-    request = TestRequest(path, method, user)
-    buckets = get_buckets(request)
-    timeout = get_timeout(buckets)
+def try_request(rules: list, request_arguments: dict, delay_after: float, expected_result: bool):
+    buckets = get_buckets(rules, **request_arguments)
+    timeout = check_throttle(buckets)
     if not timeout:
         commit_request(buckets)
     if not expected_result and not timeout:
         raise AssertionError('Must throttle, but passed')
     elif expected_result and timeout:
-        raise AssertionError('Must pass, but throttled for %s' % localize_timedelta(timeout))
+        raise AssertionError('Must pass, but throttled for %s' % str(timeout))
     time.sleep(delay_after)
 
 
-def anonymous_test():
-    anonymous = AnonymousUser()
-    try_request('path1', 'GET', anonymous, 0.1, True)
-    try_request('path1', 'POST', anonymous, 0.1, True)
-    try_request('path1', 'PATCH', anonymous, 0.1, True)
-    try_request('path2', 'PUT', anonymous, 0.1, True)
-    try_request('path2', 'DELETE', anonymous, 0.1, True)
+class MultipleUserTest(unittest.TestCase):
+    TEST_RULES = [
+        ThrottlingRule(max_requests=1, interval=timedelta(seconds=1)),
+        ThrottlingRule(max_requests=2, interval=timedelta(seconds=5)),
+    ]
+
+    def __init__(self, methodName='runTest'):
+        super().__init__(methodName)
+
+    @staticmethod
+    def user_test(user_id: int, rules):
+        try_request(rules, dict(path='path1', user_id=user_id), 0.2, True)
+        try_request(rules, dict(path='path1', user_id=user_id), 1, False)
+        try_request(rules, dict(path='path1', user_id=user_id), 0.1, True)
+        try_request(rules, dict(path='path1', user_id=user_id), 0.1, False)
+
+        try_request(rules, dict(path='path2', user_id=user_id), 0.1, True)
+        try_request(rules, dict(path='path2', user_id=user_id), 1, False)
+        try_request(rules, dict(path='path2', user_id=user_id), 0.1, True)
+        try_request(rules, dict(path='path2', user_id=user_id), 0.1, False)
+
+    def test_users(self):
+        setup(redis_port=6363, periods_to_overtake=0)
+        self.user_test(1, self.TEST_RULES)
+        self.user_test(2, self.TEST_RULES)
 
 
-def user_test(pk: int):
-    user1 = create_user(id=pk)
-    try_request('path1', 'GET', user1, 0.5, True)
-    try_request('path1', 'POST', user1, 0.5, True)
-    try_request('path1', 'PATCH', user1, 0.5, True)
-    try_request('path2', 'PUT', user1, 0.5, False)
-    try_request('path2', 'DELETE', user1, 0.5, False)
+class BurstTest(unittest.TestCase):
+    TEST_RULES = [
+        ThrottlingRule(max_requests=30, interval=timedelta(seconds=3)),
+    ]
+
+    def __init__(self, methodName='runTest'):
+        super().__init__(methodName)
+
+    @staticmethod
+    def burst_test(user_id: int, rules):
+        for i in range(15):
+            try_request(rules, dict(path='path3', user_id=user_id), 0.01, True)
+        time.sleep(3)
+        for i in range(45):
+            try_request(rules, dict(path='path3', user_id=user_id), 0.01, True)
+        try_request(rules, dict(path='path3', user_id=user_id), 0.01, False)
+        time.sleep(3)
+
+    def test_burst(self):
+        setup(redis_port=6363, periods_to_overtake=1)
+        self.burst_test(1, self.TEST_RULES)
+        self.burst_test(1, self.TEST_RULES)
 
 
-def burst_test():
-    user1 = create_user(id=1)
-    for i in range(10):
-        try_request('path2', 'GET', user1, 0.01, True)
-    time.sleep(4)
-    for i in range(30):
-        try_request('path2', 'GET', user1, 0.001, True)
-    try_request('path2', 'GET', user1, 0.001, False)
-    time.sleep(4)
-
-
-class FunctionalTest(SimpleTestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        settings.DJANGO_BUCKET_THROTTLING = TEST_SETTINGS
-        super().setUpClass()
-
-    @classmethod
-    def tearDownClass(cls):
-        cache.clear()
-        super().tearDownClass()
-
-    def test_all(self):
-        anonymous_test()
-        user_test(1)
-        user_test(2)
-        burst_test()
-        burst_test()
-
-
-class NoDbTestRunner(DiscoverRunner):
-    def setup_databases(self, **kwargs):
-        pass
-
-    def teardown_databases(self, old_config, **kwargs):
-        pass
+if __name__ == "__main__":
+    unittest.main()

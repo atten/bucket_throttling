@@ -1,16 +1,27 @@
 from datetime import datetime, timedelta
 from typing import Optional, Union
 
-from django.core.cache import cache
+import redis as r
 
 from .translation import localize_timedelta
 
 
+def setup(redis_port=6379, periods_to_overtake=0):
+    global REDIS_INSTANCE, PERIODS_TO_OVERTAKE
+    REDIS_INSTANCE = r.StrictRedis(port=redis_port)
+    PERIODS_TO_OVERTAKE = periods_to_overtake
+
+
+def redis_instance():
+    global REDIS_INSTANCE
+    return REDIS_INSTANCE
+
+
 def build_cache_key(**arguments) -> str:
     parts = []
-    for k, v in arguments.items():
+    for k in sorted(arguments):
         parts.append(k)
-        parts.append(v)
+        parts.append(arguments[k])
     return ';'.join(map(lambda s: str(s).replace(' ', '_'), parts))
 
 
@@ -32,28 +43,31 @@ class ThrottlingRule:
 
 
 class ThrottlingBucket:
-    updated_at_key = None
-    capacity_key = None
+    updated_at_key = 'updated_at'
+    capacity_key = 'capacity'
+    base_key = None
     cache_dict = None
     rule = None
     request = None
+    redis = None
 
     def __init__(self, rule: ThrottlingRule, **arguments):
-        base_key = rule.cache_key + build_cache_key(**arguments)
+        self.redis = redis_instance()
+        self.base_key = 'THROTTLING:' + rule.cache_key + build_cache_key(**arguments)
         self.rule = rule
-        self.updated_at_key = base_key + ';updated_at'
-        self.capacity_key = base_key + ';capacity'
-        self.cache_dict = cache.get_many([self.updated_at_key, self.capacity_key])
+        self.cache_dict = {k.decode(): v for (k, v) in self.redis.hgetall(self.base_key).items()}
 
     @property
     def _capacity(self) -> Union[None, int]:
         """Оставшаяся ёмкость ведра"""
-        return self.cache_dict.get(self.capacity_key)
+        d = self.cache_dict.get(self.capacity_key)
+        return int(d) if d is not None else d
 
     @property
     def _updated_at(self) -> Union[None, timedelta]:
         """Время обновления ведра"""
-        return self.cache_dict.get(self.updated_at_key)
+        d = self.cache_dict.get(self.updated_at_key)
+        return datetime.fromtimestamp(float(d)) if d is not None else d
 
     def check_throttle(self) -> Union[None, timedelta]:
         """
@@ -76,8 +90,9 @@ class ThrottlingBucket:
         # реквестов в отведённый интервал, если у ведра осталась неиспользованная емкость.
         # Сделав таймаут кэша равным нескольким интервалам действия ведра, мы
         # ограничим возможность наверстать его неиспользованную ёмкость.
-        periods_to_overtake = 0
-        cache_interval = self.rule.interval.total_seconds() * (periods_to_overtake + 1)
+        global PERIODS_TO_OVERTAKE
+        cache_interval = self.rule.interval.total_seconds() * (PERIODS_TO_OVERTAKE + 1)
+        cache_interval = max(int(cache_interval), 1)
         updated_at = self._updated_at
         max_capacity = self.rule.max_requests - 1
         now = datetime.utcnow()
@@ -85,17 +100,19 @@ class ThrottlingBucket:
         if updated_at is None:
             # во избежание одновременного присвоения значения ёмкости из нескольких потоков,
             # мы сначала пробуем нарастить ёмкость ведра
-            print('create', self.updated_at_key, 'for', cache_interval, '(%d capacity)' % max_capacity)
-            if self._capacity is None or cache.incr(self.capacity_key, max_capacity) > max_capacity:
-                cache.set(self.capacity_key, max_capacity, cache_interval)
-            cache.set(self.updated_at_key, now, cache_interval)
+            print('create', self.base_key, 'for', cache_interval, '(%d capacity)' % max_capacity)
+            if self._capacity is None or self.redis.hincrby(self.base_key, self.updated_at_key, 1) > max_capacity:
+                self.redis.hset(self.base_key, self.capacity_key, max_capacity)
+                self.redis.expire(self.base_key, cache_interval)
+            self.redis.hset(self.base_key, self.updated_at_key, now.timestamp())
 
         elif updated_at < now - self.rule.interval:
-            print('update', self.updated_at_key, '(+%d)' % max_capacity)
-            cache.set_many({
+            print('update', self.base_key, '(+%d)' % max_capacity)
+            self.redis.hmset(self.base_key, {
                 self.capacity_key: (self._capacity or 0) + max_capacity,
-                self.updated_at_key: now
-            }, cache_interval)
+                self.updated_at_key: now.timestamp()
+            })
+            self.redis.expire(self.base_key, cache_interval)
         else:
-            print('spent', self.updated_at_key, '%d remaining', self._capacity - 1)
-            cache.decr(self.capacity_key)
+            print('spent', self.base_key, '%d remaining', self._capacity - 1)
+            self.redis.hincrby(self.base_key, self.capacity_key, -1)
