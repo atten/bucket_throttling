@@ -7,7 +7,7 @@ Throttling module that uses Token Bucket algorithm
 
 **Test:**
 
-`./manage.py test django_bucket_throttling --noinput --keepdb`
+`python test.py`
 
 
 **Dependencies:**

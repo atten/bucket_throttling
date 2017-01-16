@@ -1,8 +1,8 @@
 import unittest
 import time
 
-from django_bucket_throttling import setup
-from django_bucket_throttling.utils import *
+from bucket_throttling import setup
+from bucket_throttling.utils import *
 
 
 def try_request(rules: list, request_arguments: dict, delay_after: float, expected_result: bool):
