@@ -49,7 +49,6 @@ class ThrottlingOptions:
     @property
     def redis(self):
         if not self.redis_instance:
-            print('make')
             self.redis_instance = r.StrictRedis(**self.redis_options)
         return self.redis_instance
 
