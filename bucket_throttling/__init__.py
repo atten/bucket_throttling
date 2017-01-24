@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-from typing import Optional, Union
 
 import redis as r
 
@@ -65,7 +64,7 @@ class ThrottlingRule:
     max_requests = None
     interval = None
 
-    def __init__(self, max_requests: int, interval: Union[timedelta, int]):
+    def __init__(self, max_requests: int, interval: [timedelta, int]):
         self.max_requests = max_requests
         if isinstance(interval, timedelta):
             self.interval = interval
@@ -90,20 +89,20 @@ class ThrottlingBucket:
     request = None
     options = None
 
-    def __init__(self, rule: ThrottlingRule, arguments_bundle: dict, options: Optional[ThrottlingOptions]=None):
+    def __init__(self, rule: ThrottlingRule, arguments_bundle: dict, options: ThrottlingOptions=None):
         self.options = options or defaultThrottlingOptions
         self.base_key = 'THROTTLING:%s%s' % (rule.cache_key, build_cache_key(**arguments_bundle))
         self.rule = rule
         self.cache_dict = {k.decode(): v for (k, v) in self._redis.hgetall(self.base_key).items()}
 
     @property
-    def _capacity(self) -> Union[None, int]:
+    def _capacity(self) -> [None, int]:
         """Оставшаяся ёмкость ведра"""
         d = self.cache_dict.get(self.capacity_key)
         return int(d) if d is not None else d
 
     @property
-    def _updated_at(self) -> Union[None, timedelta]:
+    def _updated_at(self) -> [None, timedelta]:
         """Время обновления ведра"""
         d = self.cache_dict.get(self.updated_at_key)
         return datetime.fromtimestamp(float(d)) if d is not None else d
@@ -116,7 +115,7 @@ class ThrottlingBucket:
         if self.options.verbose_mode:
             print(*msg)
 
-    def check_throttle(self) -> Union[None, timedelta]:
+    def check_throttle(self) -> [None, timedelta]:
         """
         Возвращает None, если лимит ведра не превышен,
         иначе интервал времени, через который ведро опустеет

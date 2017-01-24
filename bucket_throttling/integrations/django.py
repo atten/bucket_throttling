@@ -1,4 +1,4 @@
-from typing import Union, Callable
+from typing import Callable
 
 from django.http.response import JsonResponse
 from django.utils.translation import ugettext_lazy as _
@@ -47,7 +47,7 @@ class BucketThrottlingMiddleware:
         }
 
 
-def throttle_request(throttling_rules: Union[RuleList, ThrottlingRule],
+def throttle_request(throttling_rules: [RuleList, ThrottlingRule],
                      throttling_arguments_func: Callable=None,
                      throttling_options: ThrottlingOptions=None) -> Callable:
     """

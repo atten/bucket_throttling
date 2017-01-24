@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 
 from . import ThrottlingBucket, ThrottlingRule, ThrottlingOptions
 from datetime import timedelta
@@ -8,7 +8,7 @@ RuleList = List[ThrottlingRule]
 BucketList = List[ThrottlingBucket]
 
 
-def get_buckets(rules: RuleList, arguments_bundle: dict, options: Optional[ThrottlingOptions]=None) -> BucketList:
+def get_buckets(rules: RuleList, arguments_bundle: dict, options: ThrottlingOptions=None) -> BucketList:
     """
     Возвращает вёдра, созданные путём комбинации списка правил с аргументами запроса.
     """
