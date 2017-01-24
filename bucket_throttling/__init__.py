@@ -65,9 +65,12 @@ class ThrottlingRule:
     max_requests = None
     interval = None
 
-    def __init__(self, max_requests: int, interval: 'timedelta'):
+    def __init__(self, max_requests: int, interval: Union[timedelta, int]):
         self.max_requests = max_requests
-        self.interval = interval
+        if isinstance(interval, timedelta):
+            self.interval = interval
+        else:
+            self.interval = timedelta(seconds=interval)
 
     def __str__(self):
         return 'ThrottlingRule: %d requests per %s' % (self.max_requests,

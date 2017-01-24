@@ -23,7 +23,7 @@ class MultipleUserTest(unittest.TestCase):
         ThrottlingRule(max_requests=2, interval=timedelta(seconds=5)),
     ]
 
-    TEST_OPTIONS = ThrottlingOptions(verbose_mode=True, periods_to_overtake=0, redis_options={'port': 6363})
+    TEST_OPTIONS = ThrottlingOptions(verbose_mode=True, periods_to_overtake=0)
 
     def __init__(self, methodName='runTest'):
         super().__init__(methodName)
@@ -50,7 +50,7 @@ class BurstTest(unittest.TestCase):
         ThrottlingRule(max_requests=30, interval=timedelta(seconds=3)),
     ]
 
-    TEST_OPTIONS = ThrottlingOptions(verbose_mode=True, periods_to_overtake=1, redis_options={'port': 6363})
+    TEST_OPTIONS = ThrottlingOptions(verbose_mode=True, periods_to_overtake=1)  # , redis_options={'port': 6363}
 
     def __init__(self, methodName='runTest'):
         super().__init__(methodName)
