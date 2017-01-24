@@ -1,5 +1,8 @@
+from rest_framework.exceptions import Throttled
+
 from ..utils import *
 from .django import HttpResponseThrottled
+from ..translation import localize_timedelta
 
 
 class ThrottledViewSetMixIn:
@@ -10,15 +13,14 @@ class ThrottledViewSetMixIn:
     """
     throttling_rules = None
 
-    def dispatch(self, request, *args, **kwargs):
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
         buckets = self.get_throttling_buckets(request)
         if buckets:
             timeout = check_throttle(buckets)
             if timeout:
-                return HttpResponseThrottled(timeout)
-            else:
-                commit_request(buckets)
-        return super().dispatch(request, *args, **kwargs)
+                raise ThrottledException(timeout)
+            commit_request(buckets)
 
     def get_throttling_buckets(self, request):
         return get_buckets(self.get_throttling_rules(request), self.get_throttling_arguments(request))
@@ -30,6 +32,20 @@ class ThrottledViewSetMixIn:
         """аргументы по умолчанию, от которых вычисляется ключ для корзины"""
         return {
             'user': request.user.id,
-            'action': self.action_map.get(request.method.lower()),
+            'action': self.action,
             'view': self.__class__.__name__
         }
+
+
+class ThrottledException(Throttled):
+    def __init__(self, interval=None):
+        if not interval:
+            detail = HttpResponseThrottled.default_detail
+        elif isinstance(interval, timedelta):
+            # без необходимости не отображаем микросекунды
+            if int(interval.total_seconds()) > 0 and interval.microseconds > 0:
+                interval -= timedelta(microseconds=interval.microseconds)
+            detail = HttpResponseThrottled.extra_detail % localize_timedelta(interval)
+        else:
+            detail = HttpResponseThrottled.extra_detail % str(interval)
+        super().__init__(detail=detail)
