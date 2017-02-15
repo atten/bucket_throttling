@@ -14,6 +14,11 @@ class ThrottledViewSetMixIn:
     throttling_rules = None
 
     def initial(self, request, *args, **kwargs):
+        """
+        Используем этот метод для обработки событий троттлинга, который вызывается в dispatch()
+        непосредственно перед вызовом view-функции. Делаем это потому, что после вызова super().initial
+        мы будем иметь пропатченный drf request и все нужные аттрибуты ViewSet'а
+        """
         super().initial(request, *args, **kwargs)
         buckets = self.get_throttling_buckets(request)
         if buckets:
