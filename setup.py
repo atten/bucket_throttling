@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-from bucket_throttling import __version__
+from bucket_throttling.version import __version__
 
 try:
     import pypandoc

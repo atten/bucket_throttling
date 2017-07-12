@@ -5,9 +5,6 @@ from datetime import datetime, timedelta
 from .translation import localize_timedelta
 
 
-__version__ = '0.1.1'
-
-
 def build_cache_key(**arguments) -> str:
     """
     Создаёт строковый ключ кэша из всех строк ключей и значений словаря
