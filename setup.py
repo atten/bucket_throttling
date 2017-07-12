@@ -1,5 +1,4 @@
 from setuptools import setup, find_packages
-from bucket_throttling.version import __version__
 
 try:
     import pypandoc
@@ -11,7 +10,7 @@ setup(
     name='bucket_throttling',
     packages=find_packages(),
     license='MIT',
-    version=__version__,
+    version='0.1.2',
     description='Throttling module that uses Token Bucket algorithm.',
     author='Artem Vasilev',
     author_email='art@force.fm',
