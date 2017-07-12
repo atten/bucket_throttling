@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from .translation import localize_timedelta
 
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 
 def build_cache_key(**arguments) -> str:
