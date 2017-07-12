@@ -15,7 +15,7 @@ Throttling module that uses Token Bucket algorithm
 
 ### Install
 
-```
+```bash
 pip install -e git://github.com/atten/bucket_throttling.git#egg=bucket_throttling
 ```
 
@@ -24,7 +24,7 @@ pip install -e git://github.com/atten/bucket_throttling.git#egg=bucket_throttlin
 
 1. Add middleware to project settings (after AuthenticationMiddleware):
 
-```
+```python
 MIDDLEWARE = [
     ...
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -35,7 +35,7 @@ MIDDLEWARE = [
 
 2. Apply `throttle_request` decorator to target views:
 
-```
+```python
 from bucket_throttling.integrations.django import throttle_request
 from bucket_throttling import ThrottlingRule
 
@@ -47,7 +47,7 @@ def my_view(request):
 
 You're able to apply more complex rules:
 
-```
+```python
 from datetime import timedelta
 
 @throttle_request([
@@ -63,8 +63,9 @@ That's it!
 
 If user has exceeded his limit, he will receive HTTP 429 with JSON like this:
  
-`{"detail": "Expected available in 47 seconds."}`
-
+```json
+{"detail": "Expected available in 47 seconds."}
+```
 
 ### Usage in Django-REST-framework
 
@@ -72,7 +73,7 @@ If you want to throttle requests in ViewSet:
 
 1. Add `ThrottledViewSetMixIn` to you class:
 
-```
+```python
 from rest_framework.viewsets import ModelViewSet
 from bucket_throttling.integrations.rest_framework import ThrottledViewSetMixIn
 
@@ -82,7 +83,7 @@ class SomeModelViewSet(ThrottledViewSetMixIn, ModelViewSet):
 
 2. In your class, assign `throttling_rules` or implement `get_throttling_rules` function:
  
-```
+```python
 class SomeModelViewSet(ThrottledViewSetMixIn, ModelViewSet):
     throttling_rules = [
         ThrottlingRule(5, interval=timedelta(minutes=1),
@@ -108,7 +109,7 @@ With `ThrottledViewSetMixIn`, it's not necessary to add middleware to project se
 1. Change default redis location
 
 Add this code to settings.py to use custom redis port:
-```
+```python
 from bucket_throttling import defaultThrottlingOptions
 defaultThrottlingOptions.redis_options = {'port': 6565}
 ```

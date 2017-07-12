@@ -1,8 +1,11 @@
-from datetime import datetime, timedelta
-
 import redis as r
 
+from datetime import datetime, timedelta
+
 from .translation import localize_timedelta
+
+
+__version__ = '0.1.0'
 
 
 def build_cache_key(**arguments) -> str:
