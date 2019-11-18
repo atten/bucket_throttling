@@ -10,7 +10,7 @@ setup(
     name='bucket_throttling',
     packages=find_packages(),
     license='MIT',
-    version='0.1.3',
+    version='0.2.0',
     description='Throttling module that uses Token Bucket algorithm.',
     author='Artem Vasilev',
     author_email='art@force.fm',
