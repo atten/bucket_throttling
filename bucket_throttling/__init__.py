@@ -149,7 +149,7 @@ class ThrottlingBucket:
             # во избежание одновременного присвоения значения ёмкости из нескольких потоков,
             # мы сначала пробуем нарастить ёмкость ведра
             self._log('create', self.base_key, 'for', cache_interval, '(%d capacity)' % max_capacity)
-            if self._capacity is None or self._redis.hincrby(self.base_key, self.updated_at_key, 1) > max_capacity:
+            if self._capacity is None or self._redis.hincrby(self.base_key, self.capacity_key, 1) > max_capacity:
                 self._redis.hset(self.base_key, self.capacity_key, max_capacity)
                 self._redis.expire(self.base_key, cache_interval)
             self._redis.hset(self.base_key, self.updated_at_key, now.timestamp())
