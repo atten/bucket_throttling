@@ -12,6 +12,7 @@ class ThrottledViewSetMixIn:
     и аргументы для создания корзины, возвращаемые в get_throttling_arguments()
     """
     throttling_rules = None
+    throttling_distinct_kwargs = False
 
     def initial(self, request, *args, **kwargs):
         """
@@ -35,11 +36,14 @@ class ThrottledViewSetMixIn:
 
     def get_throttling_arguments(self, request):
         """аргументы по умолчанию, от которых вычисляется ключ для корзины"""
-        return {
+        d = {
             'user': request.user.id,
             'action': self.action,
             'view': self.__class__.__name__
         }
+        if self.throttling_distinct_kwargs:
+            d.update(self.kwargs)
+        return d
 
 
 class ThrottledException(Throttled):
