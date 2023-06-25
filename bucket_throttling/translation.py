@@ -2,7 +2,7 @@ from django.utils.translation import ungettext as ng
 from datetime import timedelta
 
 
-def localize_timedelta(delta: timedelta) -> str:
+def localize_timedelta(delta: timedelta, include_milliseconds=True) -> str:
     """
     >>> localize_timedelta(timedelta(days=1, seconds=35, minutes=21))
     '1 day 21 minutes 35 seconds'
@@ -38,7 +38,7 @@ def localize_timedelta(delta: timedelta) -> str:
         ret.append(ng('%d second', '%d seconds', num_seconds) % num_seconds)
 
     num_milliseconds = int(delta.microseconds / 1000)
-    if num_milliseconds > 0:
+    if num_milliseconds > 0 and include_milliseconds:
         ret.append(ng('%d ms', '%d ms', num_milliseconds) % num_milliseconds)
 
     if not len(ret):
